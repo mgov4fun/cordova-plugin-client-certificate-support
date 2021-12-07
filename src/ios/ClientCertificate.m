@@ -40,10 +40,6 @@ static ClientCertificate * mydelegate = NULL;
 {
     validateSslChain = YES;
 
-    // TODO: Check for keychain item, set self as delegate if so
-
-    [CustomHTTPProtocol setDelegate:self];
-    [CustomHTTPProtocol start];
 
     mydelegate = self;
 
@@ -88,10 +84,6 @@ static ClientCertificate * mydelegate = NULL;
     certificatePath = path;
     certificatePassword = password;
 
-    // resgister custom protocol
-    [CustomHTTPProtocol setDelegate:self];
-    [CustomHTTPProtocol start];
-
     return true;
 }
 
@@ -101,69 +93,6 @@ static ClientCertificate * mydelegate = NULL;
     [self.commandDelegate sendPluginResult:pluginResult callbackId:command.callbackId];
 }
 
-- (BOOL)customHTTPProtocol:(CustomHTTPProtocol *)protocol canAuthenticateAgainstProtectionSpace:(NSURLProtectionSpace *)protectionSpace
-{
-    NSLog(@"canAuthenticateAgainstProtectionSpace: %@", protectionSpace.authenticationMethod);
-
-    if ([protectionSpace authenticationMethod] == NSURLAuthenticationMethodServerTrust) {
-        return !validateSslChain;
-    } else if ([protectionSpace authenticationMethod] == NSURLAuthenticationMethodClientCertificate) {
-        return YES;
-    }
-
-    return NO;
-}
-
-- (void)customHTTPProtocol:(CustomHTTPProtocol *)protocol didReceiveAuthenticationChallenge:(NSURLAuthenticationChallenge *)challenge
-{
-    if([challenge previousFailureCount] == 0) {
-
-        NSURLCredential *credential = nil;
-
-        NSURLProtectionSpace *protectionSpace = [challenge protectionSpace];
-        NSString *authMethod = [protectionSpace authenticationMethod];
-        if(authMethod == NSURLAuthenticationMethodServerTrust ) {
-            credential = [NSURLCredential credentialForTrust:[protectionSpace serverTrust]];
-        }
-
-        else if(authMethod == NSURLAuthenticationMethodClientCertificate ) {
-            SecIdentityRef myIdentity = NULL;
-
-            NSMutableDictionary *query = [NSMutableDictionary dictionaryWithObjectsAndKeys:
-                                          (__bridge id)kSecClass, (__bridge id)kSecClass,
-                                          (__bridge id)kCFBooleanTrue, (__bridge id)kSecReturnRef,
-                                          (__bridge id)kSecMatchLimitOne, (__bridge id)kSecMatchLimit,
-                                          nil];
-
-            NSArray *secItemClasses = [NSArray arrayWithObjects:
-                                       (__bridge id)kSecClassIdentity,
-                                       nil];
-
-            for (id secItemClass in secItemClasses) {
-                [query setObject:secItemClass forKey:(__bridge id)kSecClass];
-
-                CFTypeRef result = NULL;
-                SecItemCopyMatching((__bridge CFDictionaryRef)query, &result);
-                if(result != NULL) {
-                    myIdentity = (SecIdentityRef)result;
-                }
-            }
-
-
-            SecCertificateRef myCertificate;
-            if(myIdentity != NULL) {
-                SecIdentityCopyCertificate(myIdentity, &myCertificate);
-                const void *certs[] = { myCertificate };
-                CFArrayRef certsArray = CFArrayCreate(NULL, certs, 1, NULL);
-                credential = [NSURLCredential credentialWithIdentity:myIdentity certificates:(__bridge NSArray*)certsArray persistence:NSURLCredentialPersistencePermanent];
-            }
-
-        }
-
-        [protocol resolveAuthenticationChallenge:challenge withCredential:credential];
-
-    }
-}
 
 OSStatus extractIdentityAndTrust(NSString *certPath, NSString *pwd, SecIdentityRef *identity, SecTrustRef *trust)
 {

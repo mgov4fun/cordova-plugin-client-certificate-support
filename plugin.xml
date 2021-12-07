@@ -54,14 +54,6 @@
 
         <header-file src="src/ios/ClientCertificate.h" />
         <source-file src="src/ios/ClientCertificate.m" />
-        <header-file src="src/ios/CacheStoragePolicy.h" />
-        <source-file src="src/ios/CacheStoragePolicy.m" />
-        <header-file src="src/ios/CanonicalRequest.h" />
-        <source-file src="src/ios/CanonicalRequest.m" />
-        <header-file src="src/ios/CustomHTTPProtocol.h" />
-        <source-file src="src/ios/CustomHTTPProtocol.m" />
-        <header-file src="src/ios/QNSURLSessionDemux.h" />
-        <source-file src="src/ios/QNSURLSessionDemux.m" />
         <header-file src="src/ios/OpenCertFile.h" />
         <source-file src="src/ios/OpenCertFile.m" />
 

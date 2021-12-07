@@ -20,9 +20,6 @@
 #import <UIKit/UIKit.h>
 #import <Cordova/CDVPlugin.h>
 
-#import "CustomHTTPProtocol.h"
-
-@interface ClientCertificate : CDVPlugin <CustomHTTPProtocolDelegate>
 {}
 
 - (void)registerAuthenticationCertificate:(CDVInvokedUrlCommand*)command;
