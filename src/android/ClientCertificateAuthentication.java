@@ -11,7 +11,6 @@ import android.util.Log;
 import android.widget.Toast;
 
 import org.apache.cordova.CallbackContext;
-import org.apache.cordova.CordovaActivity;
 import org.apache.cordova.CordovaPlugin;
 import org.apache.cordova.CordovaWebView;
 import org.apache.cordova.ICordovaClientCertRequest;
@@ -26,15 +25,10 @@ import java.util.concurrent.ExecutorService;
 public class ClientCertificateAuthentication extends CordovaPlugin {
     public static final String SP_KEY_ALIAS = "SP_KEY_ALIAS";
     public static final String TAG = "client-cert-auth";
-    private static boolean ENABLED = false;
+    private boolean ENABLED = false;
 
     X509Certificate[] mCertificates;
     PrivateKey mPrivateKey;
-
-    @Override
-    public void pluginInitialize() {
-        Log.v(TAG, "Plugin cordova-plugin-injectview loaded.");
-    }
 
     @Override
     public Boolean shouldAllowBridgeAccess(String url) {
