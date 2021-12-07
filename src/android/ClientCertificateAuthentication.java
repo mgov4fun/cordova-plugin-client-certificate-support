@@ -1,9 +1,7 @@
 package de.jstd.cordova.plugin;
 
-import android.annotation.TargetApi;
 import android.content.Context;
 import android.content.SharedPreferences;
-import android.os.Build;
 import android.preference.PreferenceManager;
 import android.security.KeyChain;
 import android.security.KeyChainAliasCallback;
@@ -11,26 +9,32 @@ import android.security.KeyChainException;
 import android.security.keystore.KeyProperties;
 import android.util.Log;
 import android.widget.Toast;
+
+import org.apache.cordova.CallbackContext;
+import org.apache.cordova.CordovaActivity;
 import org.apache.cordova.CordovaPlugin;
 import org.apache.cordova.CordovaWebView;
 import org.apache.cordova.ICordovaClientCertRequest;
+import org.json.JSONArray;
+import org.json.JSONException;
 
 import java.security.PrivateKey;
 import java.security.cert.X509Certificate;
 import java.util.concurrent.ExecutorService;
 
 
-@TargetApi(Build.VERSION_CODES.LOLLIPOP)
 public class ClientCertificateAuthentication extends CordovaPlugin {
-
-
     public static final String SP_KEY_ALIAS = "SP_KEY_ALIAS";
     public static final String TAG = "client-cert-auth";
+    private static boolean ENABLED = false;
 
     X509Certificate[] mCertificates;
     PrivateKey mPrivateKey;
-    String mAlias;
 
+    @Override
+    public void pluginInitialize() {
+        Log.v(TAG, "Plugin cordova-plugin-injectview loaded.");
+    }
 
     @Override
     public Boolean shouldAllowBridgeAccess(String url) {
@@ -38,13 +42,14 @@ public class ClientCertificateAuthentication extends CordovaPlugin {
     }
 
 
-    @TargetApi(Build.VERSION_CODES.ICE_CREAM_SANDWICH)
     @Override
     public boolean onReceivedClientCertRequest(CordovaWebView view, ICordovaClientCertRequest request) {
-        if (mCertificates == null || mPrivateKey == null) {
-            loadKeys(request);
-        } else {
-            proceedRequers(request);
+        if (ENABLED){
+            if (mCertificates == null || mPrivateKey == null) {
+                loadKeys(request);
+            } else {
+                proceedRequest(request);
+            }
         }
         return true;
     }
@@ -55,27 +60,27 @@ public class ClientCertificateAuthentication extends CordovaPlugin {
         final String alias = sp.getString(SP_KEY_ALIAS, null);
 
         if (alias == null) {
-            // KeyChain.choosePrivateKeyAlias(cordova.getActivity(), callback, new String[]{"RSA"}, null, request.getHost(), request.getPort(), null);
-            if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.M) {
-                KeyChain.choosePrivateKeyAlias(cordova.getActivity(), callback,
-                        new String[] { KeyProperties.KEY_ALGORITHM_RSA }, null, request.getHost(), request.getPort(),
-                        null);
-            } else {
-                //noinspection WrongConstant
-                KeyChain.choosePrivateKeyAlias(cordova.getActivity(), callback, new String[] { "RSA" }, null,
-                        request.getHost(), request.getPort(), null);
-            }
+            KeyChain.choosePrivateKeyAlias(cordova.getActivity(), callback,
+                    new String[]{KeyProperties.KEY_ALGORITHM_RSA}, null, request.getHost(), request.getPort(),
+                    null);
         } else {
             ExecutorService threadPool = cordova.getThreadPool();
-            threadPool.submit(new Runnable() {
-                @Override
-                public void run() {
-                    callback.alias(alias);
-                }
-            });
+            threadPool.submit(() -> callback.alias(alias));
         }
     }
 
+    public void proceedRequest(ICordovaClientCertRequest request) {
+        request.proceed(mPrivateKey, mCertificates);
+    }
+
+    @Override
+    public boolean execute(String action, JSONArray args, CallbackContext callbackContext) throws JSONException {
+        if (action.equals("registerAuthenticationCertificate")) {
+            ENABLED = true;
+            return true;
+        }
+        return false;
+    }
 
     static class AliasCallback implements KeyChainAliasCallback {
 
@@ -113,12 +118,5 @@ public class ClientCertificateAuthentication extends CordovaPlugin {
                 Log.e(TAG, errorText, e);
             }
         }
-    }
-
-    // ;
-
-
-    public void proceedRequers(ICordovaClientCertRequest request) {
-        request.proceed(mPrivateKey, mCertificates);
     }
 }

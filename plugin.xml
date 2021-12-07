@@ -33,19 +33,15 @@
     <repo>https://github.com/ccafix/cordova-plugin-client-certificate-support.git</repo>
     <issue>https://github.com/ccafix/cordova-plugin-client-certificate-support/issues</issue>
 
+  <js-module src="www/clientCertificate.js" name="clientCertificate">
+        <clobbers target="clientCertificate" />
+    </js-module>
+
     <!-- ios -->
     <platform name="ios">
-        <js-module src="www/clientCertificate.js" name="clientCertificate">
-            <clobbers target="clientCertificate" />
-        </js-module>
-
         <config-file target="config.xml" parent="/*">
             <feature name="ClientCertificate">
                 <param name="ios-package" value="ClientCertificate"/>
-                <param name="onload" value="true" />
-            </feature>
-            <feature name="OpenCertFile">
-                <param name="ios-package" value="OpenCertFile"/>
                 <param name="onload" value="true" />
             </feature>
         </config-file>
@@ -58,9 +54,8 @@
 
   <platform name="android">
     <config-file target="res/xml/config.xml" parent="/*">
-      <feature name="ClientCertificateAuthentication">
+      <feature name="ClientCertificate">
         <param name="android-package" value="de.jstd.cordova.plugin.ClientCertificateAuthentication"/>
-        <param name="onload" value="true" />
       </feature>
     </config-file>
     <source-file src="src/android/ClientCertificateAuthentication.java" target-dir="src/de/jstd/cordova/plugin"/>

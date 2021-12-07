@@ -18,10 +18,6 @@ This plugin version is known to include code from the following other plugin ver
 
 This plugin handles client certificate request on iOS and Android. On iOS this plugin version supports using client certificates from both file association and local file system, as documented below. On Android this plugin supports using client certificates from the key chain, using shared preferences from the preference manager (code from [`johannes-staehlin/cordova-client-cert-authentication`](https://github.com/johannes-staehlin/cordova-client-cert-authentication)).
 
-Specific for iOS:
-- This plugin version uses `config-file` elements to configure the app to handle open requests for files with the custom `myp12` extension, by attempting to a register p12 client certificate from such a file with no password, on iOS only.
-- This plugin reads the certificate in any folder even in a cordova.file.dataDirectory (r/w folder). (So you can retrieve a cert file from an API and use it)
-
 Specific for Android:
 
 - Android platform implementation was replaced with an implementation that is almost the same as [`johannes-staehlin/cordova-client-cert-authentication`](https://github.com/johannes-staehlin/cordova-client-cert-authentication), which does not work with any JavaScript API at all (see documentation below).
@@ -73,14 +69,6 @@ Install File API plugin:
 This plugin adds certificate-based authentication (SSO) to your cordova application. There is no extra coding or Android platform knowledge required when using this plugin on Android. It does not contain any JavaScript part since it just waits until the SSLSocket asks the client for a certificate and then shows the default client-cert pop-up you would also get when visiting your web page using the Android Chrome browser.
 
 (Not supported by the JavaScript API)
-
-### Use with file association
-
-**for iOS ONLY:**
-
-This plugin version associates itself with the `myp12` extension in plist on iOS only when it is added to a Cordova app, as specified in `plugin.xml`.
-
-If the user tells another iOS application such as Mail to open a `myp12` file with a Cordova app that uses this plugin version, this plugin will use the certificate from the `myp12` file. No special JavaScript code is required for this file association to function.
 
 ### Cordova test app
 
