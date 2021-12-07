@@ -19,12 +19,14 @@
 
 #import <UIKit/UIKit.h>
 #import <Cordova/CDVPlugin.h>
+#import <WebKit/WebKit.h>
 
+@interface ClientCertificate : CDVPlugin <WKNavigationDelegate>
 {}
 
 - (void)registerAuthenticationCertificate:(CDVInvokedUrlCommand*)command;
 - (void)validateSslChain:(CDVInvokedUrlCommand*)command;
 
 + (void)registerCertificateFromPath:(NSString*)path withPassword:(NSString*)password;
-
+@property (readwrite, strong) id _Nullable  wrappedDelegate;
 @end

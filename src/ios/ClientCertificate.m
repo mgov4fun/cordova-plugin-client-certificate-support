@@ -40,8 +40,16 @@ static ClientCertificate * mydelegate = NULL;
 {
     validateSslChain = YES;
 
-
     mydelegate = self;
+    
+    //Hook into WkWebView
+    //Wrap the current delegate with our own so we can hook into web view events.
+    WKWebView *webView = (WKWebView *)[self webView];
+    self.wrappedDelegate = [webView navigationDelegate];
+
+    [[self webViewEngine] updateWithInfo:@{
+        kCDVWebViewEngineWKNavigationDelegate : self
+    }];
 
     NSLog(@"ClientCertificate native plugin started");
 }
@@ -184,6 +192,104 @@ SecIdentityRef identityForPersistentRef(CFDataRef persistent_ref)
     NSLog(@"registerCertificateFromPath with path: %@", path);
 
     [mydelegate readAndRegisterCertificateFromPath:path withPassword:password];
+}
+
+#pragma mark - WKNavigationDelegate implementation
+
+- (BOOL)respondsToSelector:(SEL)aSelector
+{
+    if ([super respondsToSelector:aSelector]) {
+        return YES;
+    }
+    if ([self.wrappedDelegate respondsToSelector:aSelector]) {
+        return YES;
+    }
+    return NO;
+}
+
+- (void)forwardInvocation:(NSInvocation *)anInvocation
+{
+    if ([super respondsToSelector:[anInvocation selector]])
+        [anInvocation invokeWithTarget:self];
+    else
+        [anInvocation invokeWithTarget:self.wrappedDelegate];
+    
+}
+
+- (NSMethodSignature*) methodSignatureForSelector:(SEL)selector
+{
+    NSObject *delegateForResonse = [super respondsToSelector:selector] ? self : self.wrappedDelegate;
+    return [delegateForResonse respondsToSelector:selector] ? [delegateForResonse methodSignatureForSelector:selector] : nil;
+
+}
+
+- (void)webView:(WKWebView *)theWebView didReceiveAuthenticationChallenge:(NSURLAuthenticationChallenge *)challenge completionHandler:(void (^)(NSURLSessionAuthChallengeDisposition disposition, NSURLCredential * _Nullable credential))completionHandler
+{
+    NSString *authenticationMethod = [[challenge protectionSpace] authenticationMethod];
+        NSURLCredential *credential = nil;
+    
+    if ([authenticationMethod isEqualToString:NSURLAuthenticationMethodClientCertificate]){
+            SecIdentityRef myIdentity = NULL;
+            
+            NSMutableDictionary *query = [NSMutableDictionary dictionaryWithObjectsAndKeys:
+                                          (__bridge id)kSecClass, (__bridge id)kSecClass,
+                                          (__bridge id)kCFBooleanTrue, (__bridge id)kSecReturnRef,
+                                          (__bridge id)kSecMatchLimitOne, (__bridge id)kSecMatchLimit,
+                                          nil];
+
+            NSArray *secItemClasses = [NSArray arrayWithObjects:
+                                       (__bridge id)kSecClassIdentity,
+                                       nil];
+
+            for (id secItemClass in secItemClasses) {
+                [query setObject:secItemClass forKey:(__bridge id)kSecClass];
+
+                CFTypeRef result = NULL;
+                SecItemCopyMatching((__bridge CFDictionaryRef)query, &result);
+                if(result != NULL) {
+                    myIdentity = (SecIdentityRef)result;
+                }
+            }
+            
+            SecCertificateRef myCertificate;
+            if(myIdentity != NULL) {
+                SecIdentityCopyCertificate(myIdentity, &myCertificate);
+                const void *certs[] = { myCertificate };
+                CFArrayRef certsArray = CFArrayCreate(NULL, certs, 1, NULL);
+                credential = [NSURLCredential credentialWithIdentity:myIdentity certificates:(__bridge NSArray*)certsArray persistence:NSURLCredentialPersistencePermanent];
+            }
+            
+            completionHandler(NSURLSessionAuthChallengeUseCredential, credential);
+        } else if([authenticationMethod isEqualToString:NSURLAuthenticationMethodServerTrust])
+        {
+            SecTrustRef secTrustRef = challenge.protectionSpace.serverTrust;
+            if (secTrustRef != NULL)
+            {
+                SecTrustResultType result;
+                OSErr er = SecTrustEvaluate(secTrustRef, &result);
+                if (er != noErr){
+                    NSLog(@"error");
+                }
+          
+                switch ( result )
+                {
+                    case kSecTrustResultProceed:
+                        NSLog(@"kSecTrustResultProceed");
+                        completionHandler(NSURLSessionAuthChallengePerformDefaultHandling, nil);
+                        break;
+                    case kSecTrustResultUnspecified: // called 2nd
+                        NSLog(@"kSecTrustResultUnspecified");
+                        completionHandler(NSURLSessionAuthChallengeUseCredential, [NSURLCredential credentialForTrust:secTrustRef]);
+                        break;
+                    case kSecTrustResultRecoverableTrustFailure:
+                        NSLog(@"kSecTrustResultRecoverableTrustFailure");
+                        completionHandler(NSURLSessionAuthChallengeUseCredential, [NSURLCredential credentialForTrust:secTrustRef]);
+                        break;
+                }
+            }
+        }else {
+            NSLog(@"else");
+        }
 }
 
 @end
