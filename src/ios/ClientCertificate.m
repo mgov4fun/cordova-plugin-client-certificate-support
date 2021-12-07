@@ -42,15 +42,6 @@ static ClientCertificate * mydelegate = NULL;
 
     mydelegate = self;
     
-    //Hook into WkWebView
-    //Wrap the current delegate with our own so we can hook into web view events.
-    WKWebView *webView = (WKWebView *)[self webView];
-    self.wrappedDelegate = [webView navigationDelegate];
-
-    [[self webViewEngine] updateWithInfo:@{
-        kCDVWebViewEngineWKNavigationDelegate : self
-    }];
-
     NSLog(@"ClientCertificate native plugin started");
 }
 
@@ -74,6 +65,15 @@ static ClientCertificate * mydelegate = NULL;
         [self.commandDelegate sendPluginResult:pluginResult callbackId:command.callbackId];
         return;
     }
+    
+    //Hook into WkWebView
+    //Wrap the current delegate with our own so we can hook into web view events.
+    WKWebView *webView = (WKWebView *)[self webView];
+    self.wrappedDelegate = [webView navigationDelegate];
+
+    [[self webViewEngine] updateWithInfo:@{
+        kCDVWebViewEngineWKNavigationDelegate : self
+    }];
 
     [self.commandDelegate sendPluginResult:[CDVPluginResult resultWithStatus:CDVCommandStatus_OK]
                                 callbackId:command.callbackId];
@@ -189,7 +189,7 @@ SecIdentityRef identityForPersistentRef(CFDataRef persistent_ref)
 
 + (void)registerCertificateFromPath:(NSString*)path withPassword:(NSString*)password
 {
-    NSLog(@"registerCertificateFromPath with path: %@", path);
+    NSLog(@"ClientCertificate - registerCertificateFromPath with path: %@", path);
 
     [mydelegate readAndRegisterCertificateFromPath:path withPassword:password];
 }
@@ -227,6 +227,8 @@ SecIdentityRef identityForPersistentRef(CFDataRef persistent_ref)
 {
     NSString *authenticationMethod = [[challenge protectionSpace] authenticationMethod];
         NSURLCredential *credential = nil;
+    
+    NSLog(@"ClientCertificate - didReceiveAuthenticationChallenge with authenticationMethod: %@", authenticationMethod);
     
     if ([authenticationMethod isEqualToString:NSURLAuthenticationMethodClientCertificate]){
             SecIdentityRef myIdentity = NULL;
@@ -274,21 +276,23 @@ SecIdentityRef identityForPersistentRef(CFDataRef persistent_ref)
                 switch ( result )
                 {
                     case kSecTrustResultProceed:
-                        NSLog(@"kSecTrustResultProceed");
+                        NSLog(@"ClientCertificate - kSecTrustResultProceed");
                         completionHandler(NSURLSessionAuthChallengePerformDefaultHandling, nil);
                         break;
                     case kSecTrustResultUnspecified: // called 2nd
-                        NSLog(@"kSecTrustResultUnspecified");
+                        NSLog(@"ClientCertificate - kSecTrustResultUnspecified");
                         completionHandler(NSURLSessionAuthChallengeUseCredential, [NSURLCredential credentialForTrust:secTrustRef]);
                         break;
                     case kSecTrustResultRecoverableTrustFailure:
-                        NSLog(@"kSecTrustResultRecoverableTrustFailure");
+                        NSLog(@"ClientCertificate - kSecTrustResultRecoverableTrustFailure");
                         completionHandler(NSURLSessionAuthChallengeUseCredential, [NSURLCredential credentialForTrust:secTrustRef]);
                         break;
+                    default:
+                        NSLog(@"ClientCertificate - SecTrustResultType not treated: %u", result);
                 }
             }
         }else {
-            NSLog(@"else");
+            NSLog(@"ClientCertificate - Unknown authenticationMethod: %@", authenticationMethod);
         }
 }
 
